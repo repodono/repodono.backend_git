@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<layers>
+  <layer
+      name="repodono.backend.git"
+      interface="repodono.backend.git.interfaces.IRepodonoBackendGitLayer"
+      />
+</layers>
