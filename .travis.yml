@@ -5,6 +5,7 @@ python:
 install:
   - virtualenv .
   - mkdir -p buildout-cache/{eggs,downloads}
+  - bin/pip install cffi  # for pygit2 to build.
   - bin/pip install --no-deps -e git+https://github.com/repodono/repodono.registry.git#egg=repodono.registry
   - bin/pip install --no-deps -e git+https://github.com/repodono/repodono.storage.git#egg=repodono.storage
   - bin/pip install zc.buildout
