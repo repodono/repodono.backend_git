@@ -8,7 +8,7 @@ from os import walk
 import json
 # import mimetypes
 
-import zope.component
+from zope.component import getMultiAdapter
 import zope.interface
 
 from pygit2 import Signature
@@ -29,8 +29,9 @@ from dulwich.client import HttpGitClient
 from repodono.storage.base import BaseStorageBackend
 from repodono.storage.base import BaseStorage
 from repodono.storage.interfaces import IStorageInfo
-
+from repodono.storage.interfaces import IStorageBackendFSAdapter
 from repodono.storage.exceptions import PathNotDirError
+from repodono.storage.exceptions import PathNotFileError
 from repodono.storage.exceptions import PathNotFoundError
 from repodono.storage.exceptions import RevisionNotFoundError
 from repodono.storage.exceptions import StorageNotFoundError
@@ -185,17 +186,24 @@ class GitStorage(BaseStorage):
             self.repo = Repository(discover_repository(rp))
         except KeyError:
             # discover_repository may have failed.
-            raise PathInvalidError('repository does not exist at path')
+            raise PathNotFoundError('repository does not exist at path')
 
-        self.checkout('HEAD')
+        self.checkout()  # defaults to HEAD.
+
+    @property
+    def empty_root(self):
+        return {'': '_empty_root'}
 
     def _get_empty_root(self):
-        return {'': '_empty_root'}
+        return self.empty_root
 
     def _get_obj(self, path, cls=None):
         if path == '' and self._commit is None:
             # special case
             return self._get_empty_root()
+
+        if self._commit is None:
+            raise PathNotFoundError('repository is empty')
 
         root = self._commit.tree
         try:
@@ -240,8 +248,8 @@ class GitStorage(BaseStorage):
         # not what we were looking for.
         if cls == Tree:
             raise PathNotDirError('path not dir')
-        # default
-        # if cls == Blob:
+        elif cls == Blob:
+            raise PathNotFileError('path not file')
         raise PathNotFoundError('path not found')
 
     @property
@@ -268,7 +276,6 @@ class GitStorage(BaseStorage):
         if rev is None:
             rev = 'HEAD'
 
-        self._lastcheckout = rev
         try:
             self.__commit = self.repo.revparse_single(rev)
         except KeyError:
@@ -341,7 +348,7 @@ class GitStorage(BaseStorage):
             try:
                 self.repo.revparse_single(start)
             except KeyError:
-                return _log(enumerate([]))
+                return []
 
         try:
             rev = self.repo.revparse_single(start).hex
@@ -350,14 +357,9 @@ class GitStorage(BaseStorage):
 
         iterator = enumerate(self.repo.walk(rev, GIT_SORT_TIME))
 
-        return _log(iterator)
+        return list(_log(iterator))
 
     def pathinfo(self, path):
-        if self._commit is None: 
-            if self._lastcheckout != 'HEAD':
-                raise PathNotFoundError('commit not found')
-            # give an exception to HEAD
-
         obj = self._get_obj(path)
         if isinstance(obj, Blob):
             return self.format(**{
@@ -373,7 +375,7 @@ class GitStorage(BaseStorage):
                 return self.format(**{
                     'type': 'subrepo',
                     'date': '',
-                    'size': '',
+                    'size': 0,
                     'basename': self.basename(path),
                 })
 
@@ -381,14 +383,14 @@ class GitStorage(BaseStorage):
                 return self.format(**{
                     'type': 'folder',
                     'date': '',
-                    'size': '',
+                    'size': 0,
                     'basename': self.basename(path),
                 })
 
         # Assume this is a Tree.
         return self.format(**{
             'basename': self.basename(path),
-            'size': '',
+            'size': 0,
             'type': 'folder',
             'date': '',
         })

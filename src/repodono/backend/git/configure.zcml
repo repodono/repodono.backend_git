@@ -11,6 +11,12 @@
 
   <include package=".browser" />
 
+  <adapter
+      for="repodono.backend.git.utility.GitStorageBackend
+           *"
+      factory="repodono.storage.base.DefaultStorageBackendFSAdapter"
+      provides="repodono.storage.interfaces.IStorageBackendFSAdapter"
+      />
 
   <genericsetup:registerProfile
       name="default"
