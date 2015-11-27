@@ -40,11 +40,14 @@ setup(
         'plone.api',
         'setuptools',
         'z3c.jbot',
+        'pygit2',
+        'dulwich',
     ],
     extras_require={
         'test': [
             'plone.app.testing',
             'plone.app.contenttypes',
+            'plone.app.robotframework[debug]',
         ],
     },
     entry_points="""
