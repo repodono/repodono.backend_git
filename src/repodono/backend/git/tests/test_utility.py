@@ -121,6 +121,12 @@ class StorageTestCase(unittest.TestCase):
         storage.checkout(revs[0])
         self.assertEqual(storage.rev, revs[0])
 
+        with self.assertRaises(PathNotFoundError):
+            # normally won't be traversed, but for completeness, test
+            # that getting an object with a type that is not expected
+            # should fail.
+            storage._get_obj('file1', DummyItem)
+
     def test_011_storage_empty_basic(self):
         emptydir = join(self.testdir, 'empty')
 
@@ -139,6 +145,9 @@ class StorageTestCase(unittest.TestCase):
         })
 
         result = list(storage.listdir(''))
+        self.assertEqual(result, [])
+
+        result = storage.log(None, 1)
         self.assertEqual(result, [])
 
         self.assertEqual(storage.shortrev, None)
@@ -165,6 +174,9 @@ class StorageTestCase(unittest.TestCase):
 
         with self.assertRaises(PathNotFoundError):
             storage.listdir('nowhere')
+
+        with self.assertRaises(RevisionNotFoundError):
+            storage.log('nosuchrev', 1)
 
     def test_100_storage_repodata(self):
         # a simple test to check that repodata is available.
@@ -198,6 +210,12 @@ class StorageTestCase(unittest.TestCase):
                 'rev': '466b6256bd9a1588256558a8e644f04b13bc04f3',
             },
         })
+
+        with self.assertRaises(PathNotFileError):
+            storage.file('ext/import1')
+
+        with self.assertRaises(PathNotDirError):
+            storage.listdir('ext/import1')
 
     def test_110_storage_subrepo_alt_revision(self):
         # a simple test to check that repodata is available.

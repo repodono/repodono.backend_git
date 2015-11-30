@@ -224,8 +224,9 @@ class GitStorage(BaseStorage):
                     # have entry nodes or pygit2 doesn't fully support
                     # this.  Try to manually resolve the .gitmodules
                     # file.
-                    if not cls == Blob:
-                        # If we want a file, forget it.
+                    if cls is None:
+                        # Only return this if a specific type was not
+                        # expected.
                         submods = parse_gitmodules(self.repo.get(
                             root[GIT_MODULE_FILE].oid).data)
                         submod = submods.get('/'.join(breadcrumbs))
@@ -237,9 +238,8 @@ class GitStorage(BaseStorage):
                                 'path': '/'.join(fragments),
                                 'rev': oid.hex,
                             }
-                    raise PathNotDirError('path not dir')
 
-            if cls is None or isinstance(node, cls):
+            if node and (cls is None or isinstance(node, cls)):
                 return node
         except KeyError:
               # can't find what is needed in repo, raised by pygit2
