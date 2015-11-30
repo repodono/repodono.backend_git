@@ -24,7 +24,8 @@ from repodono.storage.exceptions import RevisionNotFoundError
 
 from repodono.backend.git.utility import GitStorage
 from repodono.backend.git.utility import GitStorageBackend
-from repodono.backend.git.tests import util
+
+from repodono.backend.git.testing import util
 
 
 class DummyFSBackendAdapter(object):
