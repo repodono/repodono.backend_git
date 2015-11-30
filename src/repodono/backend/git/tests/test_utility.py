@@ -144,7 +144,7 @@ class StorageTestCase(unittest.TestCase):
         self.assertEqual(storage.shortrev, None)
         self.assertEqual(storage.rev, None)
 
-    def test_011_storage_empty_failurse(self):
+    def test_011_storage_empty_failures(self):
         emptydir = join(self.testdir, 'empty')
         repo = init_repository(join(emptydir, '.git'), bare=True)
         item = DummyItem(emptydir)
@@ -165,6 +165,60 @@ class StorageTestCase(unittest.TestCase):
 
         with self.assertRaises(PathNotFoundError):
             storage.listdir('nowhere')
+
+    def test_100_storage_repodata(self):
+        # a simple test to check that repodata is available.
+        util.extract_archive(self.testdir)
+        repodata = DummyItem(join(self.testdir, 'repodata'))
+        storage = GitStorage(repodata)
+
+        pathinfo = storage.pathinfo('1')
+        self.assertEqual(pathinfo, {
+            'basename': '1',
+            'date': '',
+            'size': 0,
+            'type': 'folder',
+        })
+
+    def test_110_storage_subrepo_default(self):
+        # a simple test to check that repodata is available.
+        util.extract_archive(self.testdir)
+        repodata = DummyItem(join(self.testdir, 'repodata'))
+        storage = GitStorage(repodata)
+        pathinfo = storage.pathinfo('ext/import1')
+        self.assertEqual(pathinfo, {
+            'basename': 'import1',
+            'date': '',
+            'size': 0,
+            'type': 'subrepo',
+            'obj': {
+                '': '_subrepo',
+                'location': 'http://models.example.com/w/import1',
+                'path': '',
+                'rev': '466b6256bd9a1588256558a8e644f04b13bc04f3',
+            },
+        })
+
+    def test_110_storage_subrepo_alt_revision(self):
+        # a simple test to check that repodata is available.
+        util.extract_archive(self.testdir)
+        repodata = DummyItem(join(self.testdir, 'repodata'))
+        storage = GitStorage(repodata)
+        # checkout a specific rev
+        storage.checkout(util.ARCHIVE_REVS[1])
+        pathinfo = storage.pathinfo('ext/import1')
+        self.assertEqual(pathinfo, {
+            'basename': 'import1',
+            'date': '',
+            'size': 0,
+            'type': 'subrepo',
+            'obj': {
+                '': '_subrepo',
+                'location': 'http://models.example.com/w/import1',
+                'path': '',
+                'rev': '00cf337ef94f882f2585684c1c5c601285312f85',
+            },
+        })
 
 
 class StorageBackendTestCase(unittest.TestCase):

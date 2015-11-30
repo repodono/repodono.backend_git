@@ -23,7 +23,7 @@ from pygit2 import GIT_SORT_TIME
 from dulwich.repo import Repo
 from dulwich.client import HttpGitClient
 
-# from .ext import parse_gitmodules
+from .ext import parse_gitmodules
 # from .interfaces import IGitWorkspace
 
 from repodono.storage.base import BaseStorageBackend
@@ -371,12 +371,13 @@ class GitStorage(BaseStorage):
         elif isinstance(obj, dict):
             # special cases are represented as dict.
             if obj[''] == '_subrepo':
-                # XXX figure this out.
                 return self.format(**{
                     'type': 'subrepo',
                     'date': '',
                     'size': 0,
                     'basename': self.basename(path),
+                    # extra field.
+                    'obj': obj,
                 })
 
             elif obj[''] == '_empty_root':
