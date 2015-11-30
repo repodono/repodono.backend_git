@@ -83,6 +83,7 @@ class StorageTestCase(unittest.TestCase):
         self.assertEqual(entries, ['file1', 'file2', 'file3', 'nested'])
 
         self.assertEqual(storage.rev, revs[-1])
+        self.assertEqual(storage.shortrev, revs[-1][:12])
 
         info = storage.pathinfo('nested')
         self.assertEqual(info['size'], 0)
