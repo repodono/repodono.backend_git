@@ -5,8 +5,11 @@ import shutil
 import os
 from os.path import basename, dirname, join, isdir
 from cStringIO import StringIO
+import threading
 
 from pygit2 import init_repository
+from dulwich.repo import Repo
+from dulwich.tests.compat.test_client import HTTPGitServer
 
 import zope.component
 import zope.interface
@@ -267,7 +270,7 @@ class StorageBackendTestCase(unittest.TestCase):
         shutil.rmtree(self.testdir)
         clearZCML()
 
-    def test_base(self):
+    def test_base_failure(self):
         item = DummyItem(self.testdir)
         with self.assertRaises(PathNotFoundError):
             storage = GitStorage(item)
@@ -275,6 +278,48 @@ class StorageBackendTestCase(unittest.TestCase):
         with self.assertRaises(PathNotFoundError):
             self.backend.acquire(item)
 
+    def test_install(self):
+        item = DummyItem(self.testdir)
         self.backend.install(item)
         storage = self.backend.acquire(item)
         self.assertTrue(isinstance(storage, GitStorage))
+        self.assertEqual(storage.listdir(''), [])
+
+    def test_sync_identifier(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple2_path = join(self.testdir, 'simple2')
+
+        simple1 = DummyItem(simple1_path)
+        simple2 = DummyItem(simple2_path)
+        storage1 = self.backend.acquire(simple1)
+        storage2 = self.backend.acquire(simple2)
+        self.assertEqual(storage1.files(), [
+            'README', 'test1', 'test2', 'test3'])
+        self.assertEqual(storage2.files(), [
+            'test1', 'test2', 'test3'])
+
+        self.backend._sync_identifier(simple2_path, simple1_path)
+        storage2 = self.backend.acquire(simple2)
+        self.assertEqual(storage2.files(), [
+            'README', 'test1', 'test2', 'test3'])
+
+    def test_sync_http_identifier(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple2_path = join(self.testdir, 'simple2')
+
+        simple2 = DummyItem(simple2_path)
+        storage2 = self.backend.acquire(simple2)
+        self.assertEqual(storage2.files(), ['test1', 'test2', 'test3'])
+
+        self._httpd = HTTPGitServer(("localhost", 0), simple1_path)
+        self.addCleanup(self._httpd.shutdown)
+        threading.Thread(target=self._httpd.serve_forever).start()
+
+        # import pdb;pdb.set_trace()
+        self.backend._sync_identifier(simple2_path, self._httpd.get_url())
+
+        storage2 = self.backend.acquire(simple2)
+        self.assertEqual(storage2.files(), [
+            'README', 'test1', 'test2', 'test3'])

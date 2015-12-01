@@ -76,7 +76,7 @@ class GitStorageBackend(BaseStorageBackend):
         # Allow receivepack by default for git push.
         repo.config.set_multivar('http.receivepack', '', 'true')
 
-    def _sync_identifier(self, context, identifier):
+    def _sync_identifier(self, local_path, remote_identifier):
         # XXX assuming master.
         branch_name = 'master'
         # XXX when we figure out how to let users pick their primary
@@ -94,13 +94,13 @@ class GitStorageBackend(BaseStorageBackend):
         # 1. Fetch content
         # 2. Acquire merge target pairs.
 
-        merge_target = self._fetch(rp, identifier, branch)
+        merge_target = self._fetch(local_path, remote_identifier, branch)
 
         # Then use pygit2.
         # 3. If merge base between the two have diverted, abort.
         # 4. If remote is fresher, fast forward local.
 
-        return self._fast_forward(rp, merge_target, branch)
+        return self._fast_forward(local_path, merge_target, branch)
 
     def _fetch(self, local_path, remote_id, branch):
         # dulwich repo
