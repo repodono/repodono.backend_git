@@ -5,6 +5,7 @@ from logging import getLogger
 from glob import glob
 from os.path import join
 from os import walk
+from urlparse import urlparse
 import json
 # import mimetypes
 
@@ -22,6 +23,7 @@ from pygit2 import GIT_SORT_TIME
 
 from dulwich.repo import Repo
 from dulwich.client import HttpGitClient
+from dulwich.client import TCPGitClient
 
 from .ext import parse_gitmodules
 # from .interfaces import IGitWorkspace
@@ -105,13 +107,31 @@ class GitStorageBackend(BaseStorageBackend):
     def _fetch(self, local_path, remote_id, branch):
         # dulwich repo
         local = Repo(local_path)
+        pr = urlparse(remote_id)
 
         # Determine the fetch strategy based on protocol.
-        if remote_id.startswith('http'):
+        if pr.scheme == 'http':
+            # XXX determine if the following is actually correct.
             root, frag = remote_id.rsplit('/', 1)
             client = HttpGitClient(root)
             try:
                 remote_refs = client.fetch(frag, local)
+            except:
+                raise ValueError('error fetching from remote: %s' % remote_id)
+        elif pr.scheme == 'git':
+            netloc = pr.netloc.split(':')
+            if len(netloc) == 1:
+                host = netloc[0]
+                port = None
+            else:
+                host, port = netloc
+
+            # in case pr.path is empty, make it '/' instead.
+            path = pr.path or '/'
+
+            client = TCPGitClient(host, port)
+            try:
+                remote_refs = client.fetch(path, local)
             except:
                 raise ValueError('error fetching from remote: %s' % remote_id)
         elif remote_id.startswith('/'):

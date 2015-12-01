@@ -9,6 +9,8 @@ import threading
 
 from pygit2 import init_repository
 from dulwich.repo import Repo
+from dulwich.server import DictBackend
+from dulwich.server import TCPGitServer
 from dulwich.tests.compat.test_client import HTTPGitServer
 
 import zope.component
@@ -304,6 +306,27 @@ class StorageBackendTestCase(unittest.TestCase):
         self.assertEqual(storage2.files(), [
             'README', 'test1', 'test2', 'test3'])
 
+    def test_sync_git_server(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple2_path = join(self.testdir, 'simple2')
+        simple2 = DummyItem(simple2_path)
+
+        dulwich_repo = Repo(simple1_path)
+        dulwich_backend = DictBackend({b'/': dulwich_repo})
+        dulwich_server = TCPGitServer(dulwich_backend, b'localhost', 0)
+        self.addCleanup(dulwich_server.shutdown)
+        self.addCleanup(dulwich_server.server_close)
+        threading.Thread(target=dulwich_server.serve).start()
+        _, port = dulwich_server.socket.getsockname()
+
+        self.backend._sync_identifier(
+            simple2_path, 'git://localhost:%d' % port)
+
+        storage2 = self.backend.acquire(simple2)
+        self.assertEqual(storage2.files(), [
+            'README', 'test1', 'test2', 'test3'])
+
     def test_sync_http_identifier(self):
         util.extract_archive(self.testdir)
         simple1_path = join(self.testdir, 'simple1')
@@ -317,7 +340,6 @@ class StorageBackendTestCase(unittest.TestCase):
         self.addCleanup(self._httpd.shutdown)
         threading.Thread(target=self._httpd.serve_forever).start()
 
-        # import pdb;pdb.set_trace()
         self.backend._sync_identifier(simple2_path, self._httpd.get_url())
 
         storage2 = self.backend.acquire(simple2)
