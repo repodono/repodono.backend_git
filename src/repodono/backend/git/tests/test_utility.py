@@ -108,6 +108,18 @@ class StorageTestCase(unittest.TestCase):
         with self.assertRaises(PathNotFileError):
             storage.file('nested')
 
+        with self.assertRaises(PathNotFoundError):
+            storage.pathinfo('nested/deep/nosuchpath')
+
+        with self.assertRaises(PathNotFoundError):
+            storage.listdir('nested/deep/nosuchpath')
+
+        with self.assertRaises(PathNotDirError):
+            storage.listdir('nested/deep/dir/file')
+
+        with self.assertRaises(PathNotFileError):
+            storage.file('nested/deep/dir')
+
         logs = storage.log('HEAD', 10)
         self.assertEqual(len(logs), 4)
         self.assertEqual(logs[0]['author'], u'user3')
