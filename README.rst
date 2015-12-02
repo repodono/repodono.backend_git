@@ -4,6 +4,11 @@ repodono.backend.git
 
 Git backend for repodono framework.
 
+.. image:: https://travis-ci.org/repodono/repodono.backend_git.svg?branch=master
+  :target: https://travis-ci.org/repodono/repodono.backend_git
+.. image:: https://coveralls.io/repos/repodono/repodono.backend_git/badge.svg?branch=master&service=github
+  :target: https://coveralls.io/github/repodono/repodono.backend_git?branch=master
+
 Introduction
 ------------
 
