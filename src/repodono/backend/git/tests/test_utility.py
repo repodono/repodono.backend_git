@@ -327,6 +327,10 @@ class StorageBackendTestCase(unittest.TestCase):
         self.assertEqual(storage2.files(), [
             'README', 'test1', 'test2', 'test3'])
 
+        with self.assertRaises(ValueError) as e:
+            self.backend._sync_identifier(
+                simple2_path, 'git://localhost/baduri')
+
     def test_sync_http_identifier(self):
         util.extract_archive(self.testdir)
         simple1_path = join(self.testdir, 'simple1')
@@ -345,3 +349,178 @@ class StorageBackendTestCase(unittest.TestCase):
         storage2 = self.backend.acquire(simple2)
         self.assertEqual(storage2.files(), [
             'README', 'test1', 'test2', 'test3'])
+
+    def test_sync_failures(self):
+        util.extract_archive(self.testdir)
+        target = join(self.testdir, 'simple2')
+
+        with self.assertRaises(ValueError) as e:
+            self.backend._sync_identifier(
+                target, 'git://localhost/baduri')
+        self.assertTrue(
+            e.exception.args[0].endswith('git://localhost/baduri'))
+
+        with self.assertRaises(ValueError) as e:
+            self.backend._sync_identifier(
+                target, 'http://localhost/baduri')
+        self.assertTrue(
+            e.exception.args[0].endswith('http://localhost/baduri'))
+
+        with self.assertRaises(ValueError) as e:
+            self.backend._sync_identifier(
+                target, 'badproto://remote')
+        self.assertEqual(
+            e.exception.args[0], 'remote not supported: badproto://remote')
+
+    def test_sync_to_new_over_http(self):
+        new_path = join(self.testdir, 'new')
+        item = DummyItem(new_path)
+        self.backend.install(item)
+
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+
+        self._httpd = HTTPGitServer(("localhost", 0), simple1_path)
+        self.addCleanup(self._httpd.shutdown)
+        threading.Thread(target=self._httpd.serve_forever).start()
+
+        self.backend._sync_identifier(new_path, self._httpd.get_url())
+
+        new_storage = self.backend.acquire(item)
+        self.assertEqual(new_storage.files(), [
+            'README', 'test1', 'test2', 'test3'])
+
+    def test_sync_to_new(self):
+        new_path = join(self.testdir, 'new')
+        item = DummyItem(new_path)
+        self.backend.install(item)
+
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+
+        self.backend._sync_identifier(new_path, simple1_path)
+
+        new_storage = self.backend.acquire(item)
+        self.assertEqual(new_storage.files(), [
+            'README', 'test1', 'test2', 'test3'])
+
+    def test_sync_off_new(self):
+        # trying to sync with a new repo should not fail.
+        new_path = join(self.testdir, 'new')
+        item = DummyItem(new_path)
+        self.backend.install(item)
+
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+
+        self.backend._sync_identifier(simple1_path, new_path)
+
+        new_storage = self.backend.acquire(item)
+        self.assertEqual(new_storage.files(), [])
+
+    def test_sync_more_branch(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple4_path = join(self.testdir, 'simple4')
+
+        simple1 = DummyItem(simple1_path)
+        storage1 = self.backend.acquire(simple1)
+
+        # Local path, not really representative.
+        # self.backend._sync_identifier(simple1_path, simple4_path)
+
+        # Something is broken with the following code at the dulwich
+        # level... probably something simple http left out.
+        # self._httpd = HTTPGitServer(("localhost", 0), simple4_path)
+        # self.addCleanup(self._httpd.shutdown)
+        # threading.Thread(target=self._httpd.serve_forever).start()
+        # self.backend._sync_identifier(simple1_path, self._httpd.get_url())
+
+        dulwich_repo = Repo(simple4_path)
+        dulwich_backend = DictBackend({b'/': dulwich_repo})
+        dulwich_server = TCPGitServer(dulwich_backend, b'localhost', 0)
+        self.addCleanup(dulwich_server.shutdown)
+        self.addCleanup(dulwich_server.server_close)
+        threading.Thread(target=dulwich_server.serve).start()
+        _, port = dulwich_server.socket.getsockname()
+
+        self.backend._sync_identifier(
+            simple1_path, 'git://localhost:%d' % port)
+
+        storage1 = self.backend.acquire(simple1)
+        self.assertEqual(storage1.files(), [
+            'README', 'test1', 'test2', 'test3'])
+
+        storage1.checkout('refs/heads/test4')
+        self.assertEqual(storage1.files(), [
+            'test1', 'test2', 'test3', 'test4'])
+
+    def test_sync_off_missing_master(self):
+        # sync a repo without a master branch using default method.
+        demo_path = join(self.testdir, 'demo')
+        util.create_demo_git_repo(
+            demo_path, 'refs/heads/alternative', 'refs/heads/new')
+
+        new_path = join(self.testdir, 'new')
+        item = DummyItem(new_path)
+        self.backend.install(item)
+        results = self.backend._sync_identifier(new_path, demo_path)
+        self.assertEqual(results, [
+            ('refs/heads/alternative',
+                (True, 'Created new branch: refs/heads/alternative')),
+            ('refs/heads/new',
+                (True, 'Created new branch: refs/heads/new')),
+        ])
+
+        storage = self.backend.acquire(item)
+        storage.checkout('refs/heads/alternative')
+        self.assertEqual(storage.listdir(''), [
+            'file1', 'file2'])
+        storage.checkout('refs/heads/new')
+        self.assertEqual(storage.listdir(''), [
+            'file1', 'file2', 'file3', 'nested'])
+
+    def test_sync_same(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple2_path = join(self.testdir, 'simple2')
+        simple2 = DummyItem(simple2_path)
+
+        self._httpd = HTTPGitServer(("localhost", 0), simple1_path)
+        self.addCleanup(self._httpd.shutdown)
+        threading.Thread(target=self._httpd.serve_forever).start()
+
+        self.backend._sync_identifier(simple2_path, self._httpd.get_url())
+        results = self.backend._sync_identifier(
+            simple2_path, self._httpd.get_url())
+
+        self.assertEqual(results, [
+            ('refs/heads/master', (True, 'Source and target are identical.'))
+        ])
+
+        storage2 = self.backend.acquire(simple2)
+        self.assertEqual(storage2.files(), [
+            'README', 'test1', 'test2', 'test3'])
+
+    def test_sync_conflict(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple3_path = join(self.testdir, 'simple3')
+
+        results = self.backend._sync_identifier(simple3_path, simple1_path)
+        self.assertEqual(results, [
+            ('refs/heads/master', (False, 'Branch will diverge.')),
+        ])
+
+    def test_sync_with_older_version(self):
+        util.extract_archive(self.testdir)
+        simple1_path = join(self.testdir, 'simple1')
+        simple2_path = join(self.testdir, 'simple2')
+        # simple2 acts as an older version of simple1
+        simple1 = DummyItem(simple1_path)
+
+        results = self.backend._sync_identifier(simple1_path, simple2_path)
+
+        self.assertEqual(results, [
+            ('refs/heads/master', (True, 'No new changes found.')),
+        ])

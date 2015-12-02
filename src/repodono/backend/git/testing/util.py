@@ -34,7 +34,7 @@ def extract_archive(path, archive_path=ARCHIVE_PATH):
     tf.close()
 
 
-def create_demo_git_repo(repodir):
+def create_demo_git_repo(repodir, branch='refs/heads/master', branch2=None):
     # For the unit test - this essentially verifies that pygit2 is
     # available for usage.
     revs = []
@@ -58,7 +58,7 @@ def create_demo_git_repo(repodir):
         GIT_FILEMODE_BLOB)
     tbder.insert('file2', repo.create_blob(files[0]),
         GIT_FILEMODE_BLOB)
-    commit = repo.create_commit('refs/heads/master',
+    commit = repo.create_commit(branch,
         Signature('user1', '1@example.com', int(time()), 0),
         Signature('user1', '1@example.com', int(time()), 0),
         'added1', tbder.write(),
@@ -68,7 +68,7 @@ def create_demo_git_repo(repodir):
 
     tbder.insert('file1', repo.create_blob(files[1]),
         GIT_FILEMODE_BLOB)
-    commit = repo.create_commit('refs/heads/master',
+    commit = repo.create_commit(branch,
         Signature('user2', '2@example.com', int(time()), 0),
         Signature('user2', '2@example.com', int(time()), 0),
         'added2', tbder.write(),
@@ -76,11 +76,15 @@ def create_demo_git_repo(repodir):
     )
     revs.append(commit.hex)
 
+    if branch2:
+        # switch branch for the final commit.
+        branch = branch2
+
     tbder.insert('file2', repo.create_blob(files[1]),
         GIT_FILEMODE_BLOB)
     tbder.insert('file3', repo.create_blob(files[0]),
         GIT_FILEMODE_BLOB)
-    commit = repo.create_commit('refs/heads/master',
+    commit = repo.create_commit(branch,
         Signature('user3', '3@example.com', int(time()), 0),
         Signature('user3', '3@example.com', int(time()), 0),
         'added3', tbder.write(),
@@ -101,7 +105,7 @@ def create_demo_git_repo(repodir):
     # ntree is the final node, n is leftover from the iterator,
     # ntbder is extra and is ignored.
     tbder.insert(n, ntree, GIT_FILEMODE_TREE)
-    commit = repo.create_commit('refs/heads/master',
+    commit = repo.create_commit(branch,
         Signature('user3', '3@example.com', int(time()), 0),
         Signature('user3', '3@example.com', int(time()), 0),
         'added4', tbder.write(),

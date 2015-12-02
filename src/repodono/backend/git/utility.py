@@ -78,12 +78,12 @@ class GitStorageBackend(BaseStorageBackend):
         # Allow receivepack by default for git push.
         repo.config.set_multivar('http.receivepack', '', 'true')
 
-    def _sync_identifier(self, local_path, remote_identifier):
-        # XXX assuming master.
-        branch_name = 'master'
-        # XXX when we figure out how to let users pick their primary
-        # branches, use what they specify instead.
-        branch = "refs/heads/%s" % branch_name
+    def _sync_identifier(self, local_path, remote_id, branch=None):
+        # By default, sync all the identifiers fetched.
+        # branch_name = 'master'
+        # # XXX when we figure out how to let users pick their primary
+        # # branches, use what they specify instead.
+        # branch = "refs/heads/%s" % branch_name
 
         # Since the network and remote handling aspect between dulwich
         # and pygit2 have different strengths, i.e. dulwich has better
@@ -91,20 +91,37 @@ class GitStorageBackend(BaseStorageBackend):
         # a named remote, and pygit2 for determining merge base for
         # fast-forwarding the local to remote if applicable.
 
+        # Personally, I would use pygit2 for everything, but I don't
+        # want to reimplement the entire server infrastructure that
+        # dulwich offers.
+
         # Process starts with dulwich.
         # 0. Connect to remote
         # 1. Fetch content
         # 2. Acquire merge target pairs.
 
-        merge_target = self._fetch(local_path, remote_identifier, branch)
+        remote_refs = self._fetch(local_path, remote_id)
 
-        # Then use pygit2.
-        # 3. If merge base between the two have diverted, abort.
-        # 4. If remote is fresher, fast forward local.
+        # Then use pygit2 for each fetched remote branch.
+        # 1. Create new branch if local doesn't have that
+        # 2. If exists, check whether fast-forward can happen
+        # 2.1. If merge base between the two have diverted, abort.
+        # 2.2. If remote is fresher, fast forward local.
+        results = []
+        for branch, merge_target in remote_refs.items():
+            if not branch.startswith('refs/'):
+                continue
+            ff_result = self._fast_forward(local_path, merge_target, branch)
+            results.append((branch, ff_result))
+        return results
 
-        return self._fast_forward(local_path, merge_target, branch)
+    def _fetch(self, local_path, remote_id):
+        """
+        Fetches a remote repository identified by remote_id (usually a
+        url) into the local repo identified by local_path.  Returns all
+        remote references fetched.
+        """
 
-    def _fetch(self, local_path, remote_id, branch):
         # dulwich repo
         local = Repo(local_path)
         pr = urlparse(remote_id)
@@ -140,17 +157,10 @@ class GitStorageBackend(BaseStorageBackend):
         else:
             raise ValueError('remote not supported: %s' % remote_id)
 
-        if branch in remote_refs:
-            merge_target = remote_refs[branch]
-        else:
-            # Unknown, fall back to HEAD.
-            merge_target = remote_refs['HEAD']
-
-        # Switch usage to libgit2/pygit2 repo for "merging".
-
-        return merge_target
+        return remote_refs
 
     def _fast_forward(self, local_path, merge_target, branch):
+        # fast-forward all the branches.
         # pygit2 repo
         repo = Repository(discover_repository(local_path))
 
@@ -160,8 +170,8 @@ class GitStorageBackend(BaseStorageBackend):
         # try to resolve a common anscestor between fetched and local
         try:
             head = repo.revparse_single(branch)
-        except:
-            # New repo, create the reference now and finish.
+        except KeyError:
+            # Doesn't exist.  Create and done.
             repo.create_reference(branch, fetch_head.oid)
             return True, 'Created new branch: %s' % branch
 
@@ -169,25 +179,22 @@ class GitStorageBackend(BaseStorageBackend):
             return True, 'Source and target are identical.'
 
         # raises KeyError if no merge bases found.
-        oid = repo.merge_base(head.oid, fetch_head.oid)
+        common_oid = repo.merge_base(head.oid, fetch_head.oid)
 
         # Three different outcomes between the remaining cases.
-        if oid.hex not in (head.oid.hex, fetch_head.oid.hex):
+        if common_oid.hex not in (head.oid.hex, fetch_head.oid.hex):
             # common ancestor is beyond both of these, not going to
             # attempt a merge here and will assume this:
-            raise ValueError('heads will diverge.')
-        elif oid.hex == fetch_head.oid.hex:
-            # Remote is the common base, so nothing to do.
+            return False, 'Branch will diverge.'
+        elif common_oid.hex == fetch_head.oid.hex:
+            # Remote is also the common ancestor, so nothing to do.
             return True, 'No new changes found.'
 
-        # This case remains: oid.hex == head.oid.hex
-        # Local is the common base, so remote is newer, fast-forward.
-        try:
-            ref = repo.lookup_reference(branch)
-            ref.delete()
-        except KeyError:
-            # assume repo is empty.
-            pass
+        # This case remains: common_oid.hex == head.oid.hex, meaning
+        # this local repository is the ancestor of further changes
+        # fetched from the remote - remote newer, so fast-forward.
+        ref = repo.lookup_reference(branch)
+        ref.delete()
 
         repo.create_reference(branch, fetch_head.oid)
 
