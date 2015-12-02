@@ -2,9 +2,7 @@
 import unittest
 import tempfile
 import shutil
-import os
-from os.path import basename, dirname, join, isdir
-from cStringIO import StringIO
+from os.path import join
 import threading
 
 from pygit2 import init_repository
@@ -15,9 +13,7 @@ from dulwich.tests.compat.test_client import HTTPGitServer
 
 import zope.component
 import zope.interface
-from zope.component.hooks import getSiteManager
 
-from zope.configuration.xmlconfig import xmlconfig
 from zope.component.tests import clearZCML
 
 from repodono.storage.interfaces import IStorageBackendFSAdapter
@@ -75,7 +71,7 @@ class StorageTestCase(unittest.TestCase):
     def test_000_fail_repo(self):
         item = DummyItem(self.testdir)
         with self.assertRaises(PathNotFoundError):
-            storage = GitStorage(item)
+            GitStorage(item)
 
     def test_010_storage_base(self):
         item = DummyItem(self.testdir)
@@ -147,7 +143,7 @@ class StorageTestCase(unittest.TestCase):
     def test_011_storage_empty_basic(self):
         emptydir = join(self.testdir, 'empty')
 
-        repo = init_repository(join(emptydir, '.git'), bare=True)
+        init_repository(join(emptydir, '.git'), bare=True)
 
         item = DummyItem(emptydir)
         storage = GitStorage(item)
@@ -172,7 +168,7 @@ class StorageTestCase(unittest.TestCase):
 
     def test_011_storage_empty_failures(self):
         emptydir = join(self.testdir, 'empty')
-        repo = init_repository(join(emptydir, '.git'), bare=True)
+        init_repository(join(emptydir, '.git'), bare=True)
         item = DummyItem(emptydir)
         storage = GitStorage(item)
 
@@ -275,7 +271,7 @@ class StorageBackendTestCase(unittest.TestCase):
     def test_base_failure(self):
         item = DummyItem(self.testdir)
         with self.assertRaises(PathNotFoundError):
-            storage = GitStorage(item)
+            GitStorage(item)
 
         with self.assertRaises(PathNotFoundError):
             self.backend.acquire(item)
@@ -327,7 +323,7 @@ class StorageBackendTestCase(unittest.TestCase):
         self.assertEqual(storage2.files(), [
             'README', 'test1', 'test2', 'test3'])
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ValueError):
             self.backend._sync_identifier(
                 simple2_path, 'git://localhost/baduri')
 
@@ -517,7 +513,7 @@ class StorageBackendTestCase(unittest.TestCase):
         simple1_path = join(self.testdir, 'simple1')
         simple2_path = join(self.testdir, 'simple2')
         # simple2 acts as an older version of simple1
-        simple1 = DummyItem(simple1_path)
+        DummyItem(simple1_path)
 
         results = self.backend._sync_identifier(simple1_path, simple2_path)
 

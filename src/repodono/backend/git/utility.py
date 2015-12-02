@@ -2,22 +2,16 @@
 from datetime import datetime
 from dateutil.tz import tzoffset
 from logging import getLogger
-from glob import glob
 from os.path import join
-from os import walk
 from urlparse import urlparse
-import json
 # import mimetypes
 
 from zope.component import getMultiAdapter
-import zope.interface
+# import zope.interface
 
-from pygit2 import Signature
 from pygit2 import Repository
 from pygit2 import Tree
 from pygit2 import Blob
-from pygit2 import Tag
-from pygit2 import Commit
 from pygit2 import discover_repository, init_repository
 from pygit2 import GIT_SORT_TIME
 
@@ -36,7 +30,6 @@ from repodono.storage.exceptions import PathNotDirError
 from repodono.storage.exceptions import PathNotFileError
 from repodono.storage.exceptions import PathNotFoundError
 from repodono.storage.exceptions import RevisionNotFoundError
-from repodono.storage.exceptions import StorageNotFoundError
 
 logger = getLogger(__name__)
 
@@ -44,8 +37,8 @@ GIT_MODULE_FILE = '.gitmodules'
 
 
 def rfc2822(committer):
-    return datetime.fromtimestamp(committer.time,
-        tzoffset(None, committer.offset * 60))
+    return datetime.fromtimestamp(
+        committer.time, tzoffset(None, committer.offset * 60))
 
 
 class GitStorageBackend(BaseStorageBackend):
@@ -133,7 +126,7 @@ class GitStorageBackend(BaseStorageBackend):
             client = HttpGitClient(root)
             try:
                 remote_refs = client.fetch(frag, local)
-            except:
+            except Exception:  # XXX blind
                 raise ValueError('error fetching from remote: %s' % remote_id)
         elif pr.scheme == 'git':
             netloc = pr.netloc.split(':')
@@ -149,7 +142,7 @@ class GitStorageBackend(BaseStorageBackend):
             client = TCPGitClient(host, port)
             try:
                 remote_refs = client.fetch(path, local)
-            except:
+            except Exception:  # XXX blind
                 raise ValueError('error fetching from remote: %s' % remote_id)
         elif remote_id.startswith('/'):
             client = Repo(remote_id)
@@ -269,7 +262,7 @@ class GitStorage(BaseStorage):
             if node and (cls is None or isinstance(node, cls)):
                 return node
         except KeyError:
-              # can't find what is needed in repo, raised by pygit2
+            # can't find what is needed in repo, raised by pygit2
             raise PathNotFoundError('path not found')
 
         # not what we were looking for.

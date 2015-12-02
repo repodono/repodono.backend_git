@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 def parse_gitmodules(raw):
     """
     Parse a .gitmodules file.
@@ -33,7 +36,7 @@ def parse_gitmodules(raw):
 
         try:
             name, value = line.split('=', 1)
-        except:
+        except Exception:
             # too few values?
             continue
         locals_[name.strip()] = value.strip()

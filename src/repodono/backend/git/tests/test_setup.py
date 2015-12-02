@@ -17,8 +17,11 @@ class TestSetup(unittest.TestCase):
         self.installer = api.portal.get_tool('portal_quickinstaller')
 
     def test_product_installed(self):
-        """Test if repodono.backend.git is installed with portal_quickinstaller."""
-        self.assertTrue(self.installer.isProductInstalled('repodono.backend.git'))
+        """
+        Test if repodono.backend.git is installed with portal_quickinstaller.
+        """
+        self.assertTrue(
+            self.installer.isProductInstalled('repodono.backend.git'))
 
     def test_browserlayer(self):
         """Test that IRepodonoBackendGitLayer is registered."""
@@ -38,4 +41,5 @@ class TestUninstall(unittest.TestCase):
 
     def test_product_uninstalled(self):
         """Test if repodono.backend.git is cleanly uninstalled."""
-        self.assertFalse(self.installer.isProductInstalled('repodono.backend.git'))
+        self.assertFalse(
+            self.installer.isProductInstalled('repodono.backend.git'))

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-from cStringIO import StringIO
 from os.path import join
 from os.path import dirname
 import tarfile
 from time import time
 
-from pygit2 import Repository
 from pygit2 import init_repository
 from pygit2 import Signature
 from pygit2 import GIT_FILEMODE_BLOB
@@ -26,7 +24,7 @@ ARCHIVE_REVS = [
 
 
 def extract_archive(path, archive_path=ARCHIVE_PATH):
-    # extraction 
+    # extraction
     tf = tarfile.open(archive_path, 'r:gz')
     mem = tf.getmembers()
     for m in mem:
@@ -46,19 +44,15 @@ def create_demo_git_repo(repodir, branch='refs/heads/master', branch2=None):
         'This is a test file.\nWith a new line.\n',
         'This is a test file.\nWith a different new line.\n',
     ]
-    msg = 'added some files'
-    user = 'Tester'
-    email = '<test@example.com>'
 
     # For standard/uniqueness, repo place under `.git`.
     repo = init_repository(join(repodir, '.git'), bare=True)
     tbder = repo.TreeBuilder()
 
-    tbder.insert('file1', repo.create_blob(files[0]),
-        GIT_FILEMODE_BLOB)
-    tbder.insert('file2', repo.create_blob(files[0]),
-        GIT_FILEMODE_BLOB)
-    commit = repo.create_commit(branch,
+    tbder.insert('file1', repo.create_blob(files[0]), GIT_FILEMODE_BLOB)
+    tbder.insert('file2', repo.create_blob(files[0]), GIT_FILEMODE_BLOB)
+    commit = repo.create_commit(
+        branch,
         Signature('user1', '1@example.com', int(time()), 0),
         Signature('user1', '1@example.com', int(time()), 0),
         'added1', tbder.write(),
@@ -66,9 +60,9 @@ def create_demo_git_repo(repodir, branch='refs/heads/master', branch2=None):
     )
     revs.append(commit.hex)
 
-    tbder.insert('file1', repo.create_blob(files[1]),
-        GIT_FILEMODE_BLOB)
-    commit = repo.create_commit(branch,
+    tbder.insert('file1', repo.create_blob(files[1]), GIT_FILEMODE_BLOB)
+    commit = repo.create_commit(
+        branch,
         Signature('user2', '2@example.com', int(time()), 0),
         Signature('user2', '2@example.com', int(time()), 0),
         'added2', tbder.write(),
@@ -80,11 +74,10 @@ def create_demo_git_repo(repodir, branch='refs/heads/master', branch2=None):
         # switch branch for the final commit.
         branch = branch2
 
-    tbder.insert('file2', repo.create_blob(files[1]),
-        GIT_FILEMODE_BLOB)
-    tbder.insert('file3', repo.create_blob(files[0]),
-        GIT_FILEMODE_BLOB)
-    commit = repo.create_commit(branch,
+    tbder.insert('file2', repo.create_blob(files[1]), GIT_FILEMODE_BLOB)
+    tbder.insert('file3', repo.create_blob(files[0]), GIT_FILEMODE_BLOB)
+    commit = repo.create_commit(
+        branch,
         Signature('user3', '3@example.com', int(time()), 0),
         Signature('user3', '3@example.com', int(time()), 0),
         'added3', tbder.write(),
@@ -94,8 +87,8 @@ def create_demo_git_repo(repodir, branch='refs/heads/master', branch2=None):
 
     ntbder = repo.TreeBuilder()
     nnames = nested_name.split('/')
-    ntbder.insert(nnames.pop(), repo.create_blob(nested_file),
-        GIT_FILEMODE_BLOB)
+    ntbder.insert(
+        nnames.pop(), repo.create_blob(nested_file), GIT_FILEMODE_BLOB)
 
     for n in reversed(nnames):
         ntree = ntbder.write()
@@ -105,7 +98,8 @@ def create_demo_git_repo(repodir, branch='refs/heads/master', branch2=None):
     # ntree is the final node, n is leftover from the iterator,
     # ntbder is extra and is ignored.
     tbder.insert(n, ntree, GIT_FILEMODE_TREE)
-    commit = repo.create_commit(branch,
+    commit = repo.create_commit(
+        branch,
         Signature('user3', '3@example.com', int(time()), 0),
         Signature('user3', '3@example.com', int(time()), 0),
         'added4', tbder.write(),
