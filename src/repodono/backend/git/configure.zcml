@@ -26,11 +26,4 @@
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
 
-  <genericsetup:importStep
-      name="repodono.backend.git-postInstall"
-      title="repodono.backend.git post_install import step"
-      description="Post install import step from repodono.backend.git"
-      handler=".setuphandlers.post_install">
-  </genericsetup:importStep>
-
 </configure>
