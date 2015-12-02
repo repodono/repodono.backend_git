@@ -36,8 +36,7 @@ def parse_gitmodules(raw):
 
         try:
             name, value = line.split('=', 1)
-        except Exception:
-            # too few values?
+        except ValueError:
             continue
         locals_[name.strip()] = value.strip()
         add_result()
