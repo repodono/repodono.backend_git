@@ -29,6 +29,13 @@ class TestSetup(unittest.TestCase):
         from plone.browserlayer import utils
         self.assertIn(IRepodonoBackendGitLayer, utils.registered_layers())
 
+    def test_storage_utility_registry(self):
+        """Test the git term is added to utility registry."""
+        from plone.registry.interfaces import IRegistry
+        from zope.component import getUtility
+        registry = getUtility(IRegistry)
+        self.assertIn('git', registry['repodono.storage.backends'])
+
 
 class TestUninstall(unittest.TestCase):
 
@@ -43,3 +50,16 @@ class TestUninstall(unittest.TestCase):
         """Test if repodono.backend.git is cleanly uninstalled."""
         self.assertFalse(
             self.installer.isProductInstalled('repodono.backend.git'))
+
+    def test_browserlayer_removed(self):
+        """Test that IRepodonoStorageLayer is removed."""
+        from repodono.backend.git.interfaces import IRepodonoBackendGitLayer
+        from plone.browserlayer import utils
+        self.assertNotIn(IRepodonoBackendGitLayer, utils.registered_layers())
+
+    def test_storage_utility_registry(self):
+        """Test the git term is removed from utility registry."""
+        from plone.registry.interfaces import IRegistry
+        from zope.component import getUtility
+        registry = getUtility(IRegistry)
+        self.assertNotIn('git', registry['repodono.storage.backends'])

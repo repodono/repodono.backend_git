@@ -2,5 +2,6 @@
 <metadata>
   <version>1000</version>
   <dependencies>
+    <dependency>profile-repodono.storage:default</dependency>
   </dependencies>
 </metadata>

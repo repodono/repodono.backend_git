@@ -11,6 +11,12 @@
 
   <!-- <include package=".browser" /> -->
 
+  <utility
+      provides="repodono.storage.interfaces.IStorageBackend"
+      factory="repodono.backend.git.utility.GitStorageBackend"
+      name="git"
+      />
+
   <adapter
       for="repodono.backend.git.utility.GitStorageBackend
            *"
@@ -25,5 +31,27 @@
       description="Installs the repodono.backend.git add-on."
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
+
+  <genericsetup:importStep
+      name="repodono.backend.git-postInstall"
+      title="repodono.backend.git post_install import step"
+      description="Post install import step from repodono.backend.git"
+      handler=".setuphandlers.post_install">
+  </genericsetup:importStep>
+
+  <genericsetup:registerProfile
+      name="uninstall"
+      title="repodono.backend.git"
+      directory="profiles/uninstall"
+      description="Uninstalls the repodono.backend.git add-on."
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:importStep
+      name="repodono.backend.git-uninstall"
+      title="repodono.backend.git uninstall import step"
+      description="Import step run during ininstalling repodono.backend.git"
+      handler=".setuphandlers.uninstall">
+  </genericsetup:importStep>
 
 </configure>

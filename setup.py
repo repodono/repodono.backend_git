@@ -42,6 +42,8 @@ setup(
         'z3c.jbot',
         'pygit2',
         'dulwich',
+        'repodono.registry',
+        'repodono.storage',
     ],
     extras_require={
         'test': [
