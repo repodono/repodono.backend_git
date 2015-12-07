@@ -358,9 +358,9 @@ class StorageBackendTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError) as e:
             self.backend._sync_identifier(
-                target, 'http://localhost/baduri')
+                target, 'http://localhost:10/baduri')
         self.assertTrue(
-            e.exception.args[0].endswith('http://localhost/baduri'))
+            e.exception.args[0].endswith('http://localhost:10/baduri'))
 
         with self.assertRaises(ValueError) as e:
             self.backend._sync_identifier(
