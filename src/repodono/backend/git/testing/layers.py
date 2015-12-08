@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+import tempfile
+import shutil
+
+from zope.component import getUtility
+from plone.registry.interfaces import IRegistry
+
 from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
 from plone.app.testing import applyProfile
 from plone.app.testing import FunctionalTesting
@@ -19,6 +25,12 @@ class RepodonoBackendGitLayer(PloneSandboxLayer):
 
     def setUpPloneSite(self, portal):
         applyProfile(portal, 'repodono.backend.git:default')
+
+        self.reg = getUtility(IRegistry)
+        self.reg['repodono.storage.backend_root'] = unicode(tempfile.mkdtemp())
+
+    def tearDownPloneSite(self, portal):
+        shutil.rmtree(self.reg['repodono.storage.backend_root'])
 
 
 REPODONO_BACKEND_GIT_FIXTURE = RepodonoBackendGitLayer()
