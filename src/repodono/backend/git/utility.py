@@ -36,7 +36,7 @@ logger = getLogger(__name__)
 GIT_MODULE_FILE = '.gitmodules'
 
 
-def rfc2822(committer):
+def committer_dt(committer):
     return datetime.fromtimestamp(
         committer.time, tzoffset(None, committer.offset * 60))
 
@@ -356,7 +356,7 @@ class GitStorage(BaseStorage):
                 yield {
                     'author': commit.committer.name,
                     'email': self._commit.committer.email,
-                    'date': rfc2822(commit.committer).date(),
+                    'date': self.strftime(committer_dt(commit.committer)),
                     'node': commit.hex,
                     'rev': commit.hex,
                     'desc': commit.message
@@ -386,7 +386,7 @@ class GitStorage(BaseStorage):
                 'type': 'file',
                 'basename': self.basename(path),
                 'size': obj.size,
-                'date': rfc2822(self._commit.committer),
+                'date': self.strftime(committer_dt(self._commit.committer)),
             })
         elif isinstance(obj, dict):
             # special cases are represented as dict.

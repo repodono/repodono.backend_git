@@ -128,6 +128,8 @@ class StorageTestCase(unittest.TestCase):
         self.assertEqual(logs[2]['author'], u'user2')
         self.assertEqual(logs[3]['author'], u'user1')
 
+        self.assertTrue(isinstance(logs[0]['date'], str))
+
         logs = storage.log(None, 2)
         self.assertEqual(len(logs), 2)
 
@@ -203,6 +205,23 @@ class StorageTestCase(unittest.TestCase):
             'date': '',
             'size': 0,
             'type': 'folder',
+        })
+
+        pathinfo = storage.pathinfo('1/f1')
+        self.assertEqual(pathinfo, {
+            'date': '2013-07-22 16:40:20',
+            'basename': 'f1',
+            'type': 'file',
+            'size': 5
+        })
+
+        storage.datefmt = 'rfc3339.local'
+        pathinfo = storage.pathinfo('1/f1')
+        self.assertEqual(pathinfo, {
+            'date': '2013-07-22T16:40:20+1200',
+            'basename': 'f1',
+            'type': 'file',
+            'size': 5
         })
 
     def test_110_storage_subrepo_default(self):
