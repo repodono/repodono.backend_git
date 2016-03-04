@@ -6,6 +6,8 @@ from os.path import join
 import threading
 
 from pygit2 import init_repository
+from pygit2 import Signature
+from pygit2 import GIT_OBJ_COMMIT
 from dulwich.repo import Repo
 from dulwich.server import DictBackend
 from dulwich.server import TCPGitServer
@@ -269,6 +271,30 @@ class StorageTestCase(unittest.TestCase):
                 'rev': '00cf337ef94f882f2585684c1c5c601285312f85',
             },
         })
+
+    def test_900_storage_branches(self):
+        # a simple test to check that repodata is available.
+        util.extract_archive(self.testdir)
+        repodata = DummyItem(join(self.testdir, 'repodata'))
+        storage = GitStorage(repodata)
+        branches = storage.branches()
+        self.assertEqual(branches, (
+            ('master', 'eab05fccc349fbeb57ade09a197ddc72cd9e4388'),
+        ))
+
+    def test_901_storage_tags(self):
+        # a simple test to check that repodata is available.
+        util.extract_archive(self.testdir)
+        repodata = DummyItem(join(self.testdir, 'repodata'))
+        storage = GitStorage(repodata)
+        storage.repo.create_tag(
+            'dummy', util.ARCHIVE_REVS[1], GIT_OBJ_COMMIT,
+            Signature('User', 'user@example.com', 0, 0), 'dummy tag',
+        )
+        branches = storage.tags()
+        self.assertEqual(branches, (
+            ('dummy', '5c3f6bbf4aaf429ea5cb0850eae5697551397f7d'),
+        ))
 
 
 class StorageBackendTestCase(unittest.TestCase):

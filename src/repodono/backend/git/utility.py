@@ -415,3 +415,16 @@ class GitStorage(BaseStorage):
             'type': 'folder',
             'date': '',
         })
+
+    def branches(self):
+        return tuple(
+            (b, self.repo.lookup_branch(b).target.hex)
+            for b in self.repo.listall_branches()
+        )
+
+    def tags(self):
+        return tuple(
+            (b[10:], self.repo.lookup_reference(b).target.hex)
+            for b in self.repo.listall_references()
+            if b.startswith('refs/tags')
+        )
