@@ -61,3 +61,25 @@ instance::
     >>> from repodono.storage.interfaces import IStorage
     >>> IStorage(portal.storage_enabled)
     <repodono.backend.git.utility.GitStorage object at ...>
+
+Rendering
+---------
+
+The rendering is ultimately done by repodono.storage, done using the
+mockup-structure-pattern with vocabulary provided by the JSON endpoint
+``getStorageVocabulary``.  First we should populate it with some data::
+
+    >>> from repodono.backend.git.testing import util
+    >>> testdir = join(IStorageInfo(portal.storage_enabled).path, '.git')
+    >>> revs, fulllist = util.create_demo_git_repo(testdir)
+
+Then::
+
+    >>> import json
+    >>> browser.open(
+    ...     'http://nohost/plone/storage_enabled/getStorageVocabulary')
+    >>> result = json.loads(browser.contents)
+    >>> result['total']
+    4
+    >>> result['results'][0]['id'] == 'nested'
+    True
